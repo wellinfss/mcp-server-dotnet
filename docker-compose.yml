@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:latest
+    container_name: mcpserver-postgres
+    environment:
+      POSTGRES_DB: mcpserver
+      POSTGRES_USER: mcpuser
+      POSTGRES_PASSWORD: mcppass
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data: 
