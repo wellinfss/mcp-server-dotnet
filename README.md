@@ -31,12 +31,12 @@ O projeto segue a Clean Architecture com as seguintes camadas:
 
 1. Clone o repositório:
 ```bash
-git clone [url-do-repositorio]
+git clone https://github.com/wellinfss/mcp-server-dotnet.git
 ```
 
 2. Navegue até a pasta do projeto:
 ```bash
-cd DoNet-MCPServer
+cd mcp-server-dotnet
 ```
 
 3. Inicie o PostgreSQL usando Docker:
