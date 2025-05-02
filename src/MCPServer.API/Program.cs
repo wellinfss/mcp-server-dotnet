@@ -4,8 +4,9 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using MCPServer.Domain.Interfaces;
-using MCPServer.Infrastructure.Data;
+using MCPServer.Infrastructure.Context;
 using MCPServer.Infrastructure.Repositories;
+using MCPServer.Application.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -44,7 +45,7 @@ builder.Services.AddApplicationInsightsTelemetry();
 
 // Configure Database
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseNpgsql("Host=localhost;Database=mcpserver;Username=mcpuser;Password=mcppass"));
 
 // Configure Authentication
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -65,6 +66,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 // Register Dependencies
 builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddScoped<IVisitanteRepository, VisitanteRepository>();
+builder.Services.AddScoped<VisitanteService>();
 
 var app = builder.Build();
 

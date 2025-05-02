@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using MCPServer.Domain.Entities;
 using MCPServer.Domain.Interfaces;
-using MCPServer.Infrastructure.Data;
+using MCPServer.Infrastructure.Context;
 
 namespace MCPServer.Infrastructure.Repositories
 {
