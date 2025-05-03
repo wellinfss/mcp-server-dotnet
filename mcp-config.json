@@ -1,0 +1,8 @@
+{
+    "mcpServers": {
+        "default": {
+            "command": "dotnet",
+            "args": ["run", "--project", "src/MCPServer.MCP/MCPServer.MCP.csproj"]
+        }
+    }
+} 
