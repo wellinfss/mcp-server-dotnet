@@ -12,6 +12,7 @@ namespace MCPServer.Infrastructure.Context
 
         public DbSet<User> Users { get; set; }
         public DbSet<Visitante> Visitantes { get; set; }
+        public DbSet<Usuario> Usuarios { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -26,6 +27,10 @@ namespace MCPServer.Infrastructure.Context
                 entity.Property(e => e.UsuarioCriacao).IsRequired();
                 entity.Property(e => e.Ativo).IsRequired();
             });
+
+            modelBuilder.Entity<Usuario>()
+                .HasIndex(u => u.Email)
+                .IsUnique();
         }
     }
 }
