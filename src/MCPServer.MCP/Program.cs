@@ -15,6 +15,9 @@ using MCPServer.Application.DTOs;
 using System.ComponentModel;
 using Microsoft.Net.Http.Headers;
 using Microsoft.OpenApi.Models;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -24,10 +27,31 @@ builder.Logging.SetMinimumLevel(LogLevel.Debug);
 
 // Configure services
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"),
+        b => b.MigrationsAssembly("MCPServer.MCP")));
 
 builder.Services.AddScoped<IVisitanteRepository, VisitanteRepository>();
+builder.Services.AddScoped<IUsuarioRepository, UsuarioRepository>();
 builder.Services.AddScoped<VisitanteService>();
+builder.Services.AddScoped<AuthService>();
+
+// Configure JWT Authentication
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(
+                Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"] ?? throw new InvalidOperationException("JWT Key not found"))),
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidIssuer = builder.Configuration["Jwt:Issuer"],
+            ValidAudience = builder.Configuration["Jwt:Audience"],
+            ValidateLifetime = true,
+            ClockSkew = TimeSpan.Zero
+        };
+    });
 
 // Configure MCP
 builder.Services.AddControllers();
@@ -37,8 +61,45 @@ var app = builder.Build();
 
 // Configure pipeline
 app.UseRouting();
+app.UseAuthentication();
+app.UseAuthorization();
 
-// Map endpoints
+// Auth endpoints
+app.MapPost("/auth/login", async (LoginRequestDTO request, AuthService authService) =>
+{
+    try
+    {
+        var response = await authService.LoginAsync(request);
+        return Results.Ok(response);
+    }
+    catch (UnauthorizedAccessException ex)
+    {
+        return Results.Unauthorized();
+    }
+    catch (Exception ex)
+    {
+        return Results.Problem(ex.Message);
+    }
+});
+
+app.MapPost("/auth/register", async (RegisterRequestDTO request, AuthService authService) =>
+{
+    try
+    {
+        var response = await authService.RegisterAsync(request);
+        return Results.Ok(response);
+    }
+    catch (InvalidOperationException ex)
+    {
+        return Results.BadRequest(ex.Message);
+    }
+    catch (Exception ex)
+    {
+        return Results.Problem(ex.Message);
+    }
+});
+
+// Protected endpoints
 app.MapGet("/mcp/ListarVisitantes", async (VisitanteService visitanteService) =>
 {
     try
@@ -50,7 +111,7 @@ app.MapGet("/mcp/ListarVisitantes", async (VisitanteService visitanteService) =>
     {
         return Results.Problem(ex.Message);
     }
-});
+}).RequireAuthorization();
 
 app.MapPost("/mcp/RegistrarVisitante", async (CreateVisitanteDTO visitante, VisitanteService visitanteService) =>
 {
@@ -65,21 +126,44 @@ app.MapPost("/mcp/RegistrarVisitante", async (CreateVisitanteDTO visitante, Visi
     {
         return Results.Problem(ex.Message);
     }
-});
+}).RequireAuthorization();
 
 // Add tools discovery endpoint
 app.MapGet("/tools", () => Results.Ok(new
 {
     Tools = new object[] {
         new {
+            Name = "Login",
+            Path = "/auth/login",
+            Method = "POST",
+            Example = new LoginRequestDTO
+            {
+                Email = "usuario@exemplo.com",
+                Senha = "senha123"
+            }
+        },
+        new {
+            Name = "Register",
+            Path = "/auth/register",
+            Method = "POST",
+            Example = new RegisterRequestDTO
+            {
+                Nome = "Novo Usuário",
+                Email = "novo@exemplo.com",
+                Senha = "senha123"
+            }
+        },
+        new {
             Name = "ListarVisitantes",
             Path = "/mcp/ListarVisitantes",
-            Method = "GET"
+            Method = "GET",
+            RequiresAuth = true
         },
         new {
             Name = "RegistrarVisitante",
             Path = "/mcp/RegistrarVisitante",
             Method = "POST",
+            RequiresAuth = true,
             Example = new CreateVisitanteDTO
             {
                 Nome = "João Silva",
@@ -92,7 +176,7 @@ app.MapGet("/tools", () => Results.Ok(new
 
 // Start server
 app.Urls.Clear();
-app.Urls.Add("http://0.0.0.0:7000");
+app.Urls.Add("http://0.0.0.0:7001");
 
 await app.RunAsync();
 
